@@ -9,11 +9,11 @@ class getProxyPage():
     def getHttp(self):
         #proxies = {'http': 'http://10.166.1.37:8080/'}
         #opener = request.FancyURLopener(proxies)
-        proxy_support = request.ProxyHandler({'http':'10.166.1.37:8080'})
-        opener = request.build_opener(proxy_support)
-        request.install_opener(opener)
-        url = 'http://www.qq.com'
-        with opener.open(url) as f:
+        #proxy_support = request.ProxyHandler({'http':'10.166.1.37:8080'})
+        #opener = request.build_opener(proxy_support)
+        #request.install_opener(opener)
+        url = 'http://cn-proxy.com/'
+        with request.urlopen(url) as f:
             print(f.status,f.reason)
             for k,v in f.getheaders():
                 print(k,v)
