@@ -31,7 +31,12 @@ class getProxyPage():
 
     def decodePage(self,data):
         soup = BeautifulSoup(data,'html.parser')
-        print(soup.find(re.compile(r'')))
+        content = soup.select('#ip_list')
+        listip = content[0].get_text().split()[10:]
+        print(len(listip))
+        for i in range(0,99,8):
+            self.proxyStorage['%s:%s' % (str(listip[i]),str(listip[i+1]))] = {}
+        print(self.proxyStorage)
 
 
 proxypage = getProxyPage()
