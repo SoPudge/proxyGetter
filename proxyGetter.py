@@ -20,12 +20,12 @@ class getProxyPage(object):
 
     def getHttp(self):
         #使用代理获取地址
-        #proxy_support = request.ProxyHandler({'http':'10.166.1.37:8080'})
-        #opener = request.build_opener(proxy_support)
-        #request.install_opener(opener)
+        proxy_support = request.ProxyHandler({'http':'10.166.1.37:8080'})
+        opener = request.build_opener(proxy_support)
+        request.install_opener(opener)
         #url = 'http://www.xicidaili.com/nt/'
         #读取对应网页
-        with request.urlopen(self.req) as f:
+        with opener.open(self.req) as f:
             data = f.read().decode('utf-8')
         return data
 
@@ -37,7 +37,7 @@ class getProxyPage(object):
             ipaddr = soupFirst.find_all('td')[1].string
             port = soupFirst.find_all('td')[2].string
             if not soupFirst.find('a'):
-                zone = ''
+                zone = '无地区'
             else:
                 zone = soupFirst.find('a').string
             isTranspar = soupFirst.find_all(class_="country")[1].string
