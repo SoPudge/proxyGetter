@@ -4,6 +4,7 @@ from html.parser import HTMLParser
 from bs4 import BeautifulSoup
 from collections import OrderedDict
 import re
+import time
 class getProxyPage(object):
     """docstring for getProxyPage"""
     """本类用于抓取代理服务器网页"""
@@ -11,7 +12,7 @@ class getProxyPage(object):
     def __init__(self):
         super(getProxyPage, self).__init__()
         #建立haders
-        self.url = 'http://www.xicidaili.com/nn/'
+        self.url = 'http://www.xicidaili.com/nt/'
         self.req = request.Request(self.url)
         self.req.add_header('Host','www.xicidaili.com')
         self.req.add_header('User-Agent','Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:51.0) Gecko/20100101 Firefox/51.0.1 Waterfox/51.0.1')
@@ -50,8 +51,25 @@ class getProxyPage(object):
         print(self.proxyStorage)
 
 
-#class checkAlive(object)
-#本来做检测代理可用性
+class checkAlive(object):
+    '''本类专门用于检测代理的可用性
+       原理是使用代理访问baidu，看延迟
+    '''
+    def __init__(self):
+        pass
+    def isAlive(self): 
+        proxy_support = request.ProxyHandler({'http':'10.166.1.37:8080'})
+        opener = request.build_opener(proxy_support)
+        request.install_opener(opener)
+        #读取对应网页
+        with opener.open('http://www.baidu.com') as f:
+            t1 = time.time()
+            f.read().decode('utf-8')
+            t2 = time.time()
+        print(t2 - t1)
+
+
+
 
 #class storeToSql(object)
 #本类存储到sql当中
@@ -59,6 +77,8 @@ class getProxyPage(object):
 proxypage = getProxyPage()
 proxydecode = proxypage.getHttp()
 proxypage.decodePage(proxydecode)
+checkIP = checkAlive()
+checkIP.isAlive()
 #if __name__ == '__main__':
 #    proxy = getProxyPage()
 #    proxy.getHttp()
