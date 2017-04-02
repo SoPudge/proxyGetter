@@ -36,23 +36,28 @@ class getProxy(object):
         #此处先内部执行getHttp抓取网页
         self.getHttp()
         soup = BeautifulSoup(self._page,'html.parser')
-        for i in range(1,101):
-            soupFirst = soup.find_all('tr')[i]
-            ipaddr = soupFirst.find_all('td')[1].string
-            port = soupFirst.find_all('td')[2].string
-            if not soupFirst.find('a'):
-                zone = '无地区'
+        soupFirst = soup.find_all('tr')
+        templist = []
+        #此处通过stripped_strings方法获取不带空格的，所有html标签的text，为一个generator
+        #验证templist长度，确认抓取内容中不含地理位置，如不含有则手动添加，保证list长度统一
+        for i in range(1,len(soupFirst)):
+            for text in soupFirst[i].stripped_strings:
+                templist.append(text)
+            if len(templist) == 7:
+                pass
             else:
-                zone = soupFirst.find('a').string
-            isTranspar = soupFirst.find_all(class_="country")[1].string
-            ishttp = soupFirst.find_all('td')[5].string
-            linkspeed = soupFirst.find_all(class_="bar")[0]['title']
-            linktime = soupFirst.find_all(class_="bar")[1]['title']
-            alivetime = soupFirst.find_all('td')[-2].string
-            updatetime = soupFirst.find_all('td')[-1].string
-            self._proxyStorage['%s:%s' % (ipaddr,port)] = {'zone':zone,'isTranspar':isTranspar,'ishttp':ishttp,'linkspeed':linkspeed,'linktime':linktime,'alivetime':alivetime,'updatetime':updatetime}
+                templist.insert(2,'无地理位置')
+        #此处将list按照位置加入倒字典当中并返回
+            self._proxyStorage['%s:%s' % (templist[0],templist[1])] = {
+                                                                        'zone':templist[2],
+                                                                        'isTranspar':templist[3],
+                                                                        'ishttp':templist[4],
+                                                                        'alivetime':templist[5],
+                                                                        'updatetime':templist[6]
+                                                                      }
+        #此处重置templist，否则每次添加内容到同一个templist当中，导致字典只能获取第一个代理的值
+            templist = []
         return self._proxyStorage
-
 
 class checkAlive(object):
     '''本类专门用于检测代理的可用性
@@ -67,9 +72,9 @@ class checkAlive(object):
         #读取对应网页用以测试速度
         t1 = time.time()
         with opener.open('http://m.51job.com') as f:
-            f.read().decode('utf-8')
-        t2 = time.time()
-        return ('%s %0.4f ms' % (ipport,(t2 - t1)*1000))
+            status = f.status
+            t2 = time.time()
+        return ('%s %0.4fms %s' % (ipport,(t2 - t1)*1000,status))
 
 
 #class storeToSql(object)
@@ -78,6 +83,6 @@ class checkAlive(object):
 proxylist = getProxy()
 proxyresult = proxylist.decodePage()
 checkresult = checkAlive()
-print(proxyresult.keys())
+print(proxyresult)
 for k,v in proxyresult.items():
     print(checkresult.isAlive(v['ishttp'],k))
