@@ -48,13 +48,15 @@ class getProxy(object):
             else:
                 templist.insert(2,'无地理位置')
         #此处将list按照位置加入倒字典当中并返回
-            self._proxyStorage['%s:%s' % (templist[0],templist[1])] = {
-                                                                        'zone':templist[2],
-                                                                        'isTranspar':templist[3],
-                                                                        'ishttp':templist[4],
-                                                                        'alivetime':templist[5],
-                                                                        'updatetime':templist[6]
-                                                                      }
+            self._proxyStorage['%s:%s' % (templist[0],templist[1])] = (
+                                                                        templist[0],
+                                                                        templist[1],
+                                                                        templist[2],
+                                                                        templist[3],
+                                                                        templist[4],
+                                                                        templist[5],
+                                                                        templist[6]
+                                                                      )
         #此处重置templist，否则每次添加内容到同一个templist当中，导致字典只能获取第一个代理的值
             templist = []
         return self._proxyStorage
@@ -78,20 +80,31 @@ class checkAlive(object):
 
 
 class storage(object):
-    """本类存储到sql当中"""
+    """本类存储到sql当中""" 
     #传入一个字典，存储到数据库当中，并且可以读取
     #init当中预先定义一个数据库表，可判断如果存在则跳过，否则新建
     #store应当是添加数据，而不是覆盖数据
-    def __init__(self):
-        pass
+    def __init__(self,**kwargs):
+        self._kw = kwargs 
+        self._sqlname = 'proxy.db'
+        self._conn = sqlite3.connect(self._sqlname)
+        self._c = self._conn.cursor()
+        #self._c.execute('CREATE TABLE xicidaili (ipaddr TEXT PRIMARY KEY,port TEXT,zone TEXT,istranspar TEXT,ishttp TEXT,alivetime TEXT, updatetime TEXT)')
+
     def storeToSQL(self):
-        conn = sqlite3.connect()
-        cursor = conn.cursor()
-        cursor.execute()
-
-
-
-
+        try:
+            proxyvalues = []
+            for k,v in self._kw.items():
+                proxyvalues.append(v)
+            self._c.executemany('INSERT INTO xicidaili VALUES (?,?,?,?,?,?,?)',proxyvalues)
+        except sqlite3.Error as e:
+            print('An error occourd: %s' % e.args[0])
+        finally:
+            result = self._c.rowcount
+            self._c.close()
+            self._conn.commit()
+            self._conn.close()
+        return result
 
 
 
@@ -99,5 +112,7 @@ proxylist = getProxy()
 proxyresult = proxylist.decodePage()
 #checkresult = checkAlive()
 print(proxyresult)
+storageproxy = storage(**proxyresult)
+print(storageproxy.storeToSQL())
 #for k,v in proxyresult.items():
-#    print(checkresult.isAlive(v['ishttp'],k))
+#    print(checkresult.isAlive(v[4],k))
