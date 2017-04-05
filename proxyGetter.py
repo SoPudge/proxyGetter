@@ -5,6 +5,7 @@ from bs4 import BeautifulSoup
 from collections import OrderedDict
 import re
 import time
+import sqlite3
 class getProxy(object):
     """docstring for getProxyPage"""
     """本类用于抓取代理服务器网页"""
@@ -25,7 +26,6 @@ class getProxy(object):
         #proxy_support = request.ProxyHandler({'http':'10.166.1.37:8080'})
         #opener = request.build_opener(proxy_support)
         #request.install_opener(opener)
-        #url = 'http://www.xicidaili.com/nt/'
         #读取对应网页
         with request.urlopen(self._req) as f:
             self._page = f.read().decode('utf-8')
@@ -77,12 +77,27 @@ class checkAlive(object):
         return ('%s %0.4fms %s' % (ipport,(t2 - t1)*1000,status))
 
 
-#class storeToSql(object)
-#本类存储到sql当中
+class storage(object):
+    """本类存储到sql当中"""
+    #传入一个字典，存储到数据库当中，并且可以读取
+    #init当中预先定义一个数据库表，可判断如果存在则跳过，否则新建
+    #store应当是添加数据，而不是覆盖数据
+    def __init__(self):
+        pass
+    def storeToSQL(self):
+        conn = sqlite3.connect()
+        cursor = conn.cursor()
+        cursor.execute()
+
+
+
+
+
+
 
 proxylist = getProxy()
 proxyresult = proxylist.decodePage()
-checkresult = checkAlive()
+#checkresult = checkAlive()
 print(proxyresult)
-for k,v in proxyresult.items():
-    print(checkresult.isAlive(v['ishttp'],k))
+#for k,v in proxyresult.items():
+#    print(checkresult.isAlive(v['ishttp'],k))
