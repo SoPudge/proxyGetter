@@ -89,14 +89,15 @@ class storage(object):
         self._sqlname = 'proxy.db'
         self._conn = sqlite3.connect(self._sqlname)
         self._c = self._conn.cursor()
-        #self._c.execute('CREATE TABLE xicidaili (ipaddr TEXT PRIMARY KEY,port TEXT,zone TEXT,istranspar TEXT,ishttp TEXT,alivetime TEXT, updatetime TEXT)')
+        self._c.execute('CREATE TABLE IF NOT EXISTS xicidaili (id INTEGER PRIMARY KEY,ipaddr TEXT,port TEXT,zone TEXT,istranspar TEXT,ishttp TEXT,alivetime TEXT, updatetime TEXT)')
+        #这里设置sqlite主键自增，id INTEGER PRIMARY KEY，则插入一个null值得时候，会实现自动新增主键
 
     def storeToSQL(self):
         try:
             proxyvalues = []
             for k,v in self._kw.items():
                 proxyvalues.append(v)
-            self._c.executemany('INSERT INTO xicidaili VALUES (?,?,?,?,?,?,?)',proxyvalues)
+            self._c.executemany('INSERT INTO xicidaili VALUES (NULL,?,?,?,?,?,?,?)',proxyvalues)
         except sqlite3.Error as e:
             print('An error occourd: %s' % e.args[0])
         finally:
