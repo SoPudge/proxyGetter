@@ -51,11 +51,9 @@ class getProxy(object):
             self._proxyStorage['%s:%s' % (templist[0],templist[1])] = (
                                                                         templist[0],
                                                                         templist[1],
-                                                                        templist[2],
-                                                                        templist[3],
                                                                         templist[4],
-                                                                        templist[5],
-                                                                        templist[6]
+                                                                        templist[3],
+                                                                        templist[2]
                                                                       )
         #此处重置templist，否则每次添加内容到同一个templist当中，导致字典只能获取第一个代理的值
             templist = []
@@ -89,19 +87,25 @@ class storage(object):
         self._sqlname = 'proxy.db'
         self._conn = sqlite3.connect(self._sqlname)
         self._c = self._conn.cursor()
-        self._c.execute('CREATE TABLE IF NOT EXISTS xicidaili (id INTEGER PRIMARY KEY,ipaddr TEXT,port TEXT,zone TEXT,istranspar TEXT,ishttp TEXT,alivetime TEXT, updatetime TEXT)')
+        self._c.execute('CREATE TABLE IF NOT EXISTS proxy (ipaddr TEXT,port TEXT,ishttp TEXT,istranspar TEXT,zone TEXT)')
         #这里设置sqlite主键自增，id INTEGER PRIMARY KEY，则插入一个null值得时候，会实现自动新增主键
+        #同时只存储ip地址，端口，类型，匿名情况和地区情况
 
     def storeToSQL(self):
         try:
             proxyvalues = []
             for k,v in self._kw.items():
                 proxyvalues.append(v)
-            self._c.executemany('INSERT INTO xicidaili VALUES (NULL,?,?,?,?,?,?,?)',proxyvalues)
+            self._c.executemany('INSERT INTO proxy VALUES (?,?,?,?,?)',proxyvalues)
+            #以上是插入对象到数据库
+            self._c.execute('DELETE FROM proxy WHERE rowid NOT IN (SELECT MIN(rowid) FROM proxy GROUP BY ipaddr)')
+            #每次插入之后，做去除重复项操作，rowid为自带属性，并按照ipaddr删除
         except sqlite3.Error as e:
             print('An error occourd: %s' % e.args[0])
         finally:
-            result = self._c.rowcount
+            self._c.execute('SELECT COUNT(ipaddr) FROM proxy')
+            result = self._c.fetchall()[0][0]
+            #以上查询当前数据表中一共有多少条数据
             self._c.close()
             self._conn.commit()
             self._conn.close()
