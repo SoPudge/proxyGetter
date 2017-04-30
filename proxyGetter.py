@@ -66,12 +66,14 @@ class checkAlive(object):
     '''
     def __init__(self):
         self._url = 'http://m.51job.com'
+        self._urlconfirm = '工作'
         self._sqlname = 'proxy.db'
         self._conn = sqlite3.connect(self._sqlname)
         self._c = self._conn.cursor()
         self._c.execute('CREATE TABLE IF NOT EXISTS status (ipaddr TEXT,site TEXT,lag TEXT,statu TEXT,updatetime TEXT)')
-        self._httpipport = self._c.execute('SELECT ishttp,ipaddr,port FROM proxy')
-        #将http ipaddr port 结果放在生成器当中，以便调用
+        self._c.execute('SELECT ishttp,ipaddr,port FROM proxy')
+        self._httpipport = self._c.fetchall()
+        #将http ipaddr port 结果放在list当中，以便调用，这样不会重复读取数据库
         self._c.execute('SELECT COUNT(ipaddr) FROM proxy')
         self._proxynum = self._c.fetchall()[0][0]
         #这里获取一共有多少条代理需要验证
@@ -80,7 +82,7 @@ class checkAlive(object):
         num = 1
         insertvalue = []
         try:
-            for row in self._c.execute('SELECT ishttp,ipaddr,port FROM proxy'):
+            for row in self._httpipport:
                 ishttp = row[0]
                 ipport = ('%s:%s' % (row[1],row[2]))
                 #循环读取数据库当中的ishttp和ipport字段
@@ -91,16 +93,15 @@ class checkAlive(object):
                 print('%s/%s 正在验证代理：%s:%s ...' % (num,self._proxynum,row[1],row[2]))
                 t1 = time.time()
                 with opener.open(self._url) as f:
-                    sitestatu = f.status
+                    if self._urlconfirm in f.info():
+                        sitestatu = 'OK'
+                    else: sitestatu = 'NOK'
                     t2 = time.time()
                 lagtime =('%0.2f' % ((t2-t1)*1000))
                 insertvalue.append((row[1],self._url,lagtime,sitestatu,'2017'))
                 #这里将需要写入数据库的内容先放在list当中，方便后续一次性execuatemany写入
-                print('验证过成功，延迟 %s ms' % lagtime)
+                print('http代码为 %s，延迟 %s ms' % (sitestatu,lagtime))
                 num = num + 1
-
-        except sqlite3.Error as e:
-            print('An error occourd in checkstatus: %s' % e.args[0])
 
         finally:
             self._c.executemany('INSERT INTO status VALUES (?,?,?,?,?)',insertvalue)
@@ -156,3 +157,4 @@ storageproxy = storage(**proxyresult)
 print(storageproxy.storeToSQL())
 checkresult = checkAlive()
 checkresult.isAlive()
+
