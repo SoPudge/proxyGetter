@@ -3,6 +3,7 @@ from urllib import request
 from html.parser import HTMLParser
 from bs4 import BeautifulSoup
 from collections import OrderedDict
+from lxml import html
 import requests
 import re
 import time
@@ -15,46 +16,67 @@ class getProxy(object):
     def __init__(self):
         #头headers
         self._xiciheaders = {'Host':'www.xicidaili.com','User-Agent':'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:51.0) Gecko/20100101 Firefox/51.0.1 Waterfox/51.0.1'}
+        self._kdailiheaders = {'Host':'www.kuaidaili.com','User-Agent':'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:51.0) Gecko/20100101 Firefox/51.0.1 Waterfox/51.0.1'}
         #requests sessions
         self._s = requests.Session()
 
     @property
     def getxici(self):
         #读取对应网页
-        proxyStorage = {}
-        url = 'http://www.xicidaili.com/nn/'
-        r = self._s.get(url,headers = self._xiciheaders)
-        page = r.text
+        #xpath获取代理内容为list，通过循环将list放到对应的dict当中，格式为ipport:ip,addr,http,trans，同时通过update合并字典去重复
+        d = {}
+        da = {}
+        urls = ['http://www.xicidaili.com/nn/','http://www.xicidaili.com/nt/','http://www.xicidaili.com/wn/','http://www.xicidaili.com/wt/']
+        for url in urls:
+            r = self._s.get(url,headers = self._xiciheaders)
+            page = r.text
 
-        soup = BeautifulSoup(page,'html.parser')
-        soupFirst = soup.find_all('tr')
-        l = map(lambda x:x.stripped_strings,soupFirst)
-        n = (m for m in [i for i in l])
-        print(n)
-        #此处通过stripped_strings方法获取不带空格的，所有html标签的text，为一个generator
-        #验证templist长度，确认抓取内容中不含地理位置，如不含有则手动添加，保证list长度统一
-        #return proxyStorage
+            tree = html.fromstring(page)
+            t = tree.xpath('//tr/td[position()<=3]/text() | //tr/td[5]/text() | //tr/td[6]/text()')        
+            for i in range(0,len(t),4):
+                d['%s:%s' % (t[i],t[i+1])] = (t[i],t[i+1],t[i+3],t[i+2])
+            da.update(d)
+        return da
+
+    @property
+    def getkdaili(self):
+        d = {}
+        da = {}
+        keyurl = 'http://www.kuaidaili.com/free/'
+        keywords = ['inha/1','inha/2','inha/3','intr/1','intr/2','intr/3','outha/1','outha/2','outha/3','outtr/1','outtr/2','outtr/3',]
+        urls = [keyurl+x for x in keywords]
+        for url in urls:
+            time.sleep(1)
+            r = self._s.get(url,headers = self._kdailiheaders)
+            page = r.text
+
+            tree = html.fromstring(page)
+            t = tree.xpath('//td[position()<=4]/text()')        
+            for i in range(0,len(t),4):
+                d['%s:%s' % (t[i],t[i+1])] = (t[i],t[i+1],t[i+3],t[i+2])
+            da.update(d)
+        return da
 
 class storage(object):
     """本类存储到sql当中""" 
     #传入一个字典，存储到数据库当中，并且可以读取
     #init当中预先定义一个数据库表，可判断如果存在则跳过，否则新建
     #store应当是添加数据，而不是覆盖数据
-    def __init__(self,**kwargs):
-        self._kw = kwargs 
+    def __init__(self):
         self._sqlname = 'proxy.db'
         self._conn = sqlite3.connect(self._sqlname)
         self._c = self._conn.cursor()
-        self._c.execute('CREATE TABLE IF NOT EXISTS proxy (ipaddr TEXT,port TEXT,ishttp TEXT,istranspar TEXT,zone TEXT)')
+        self._c.execute('CREATE TABLE IF NOT EXISTS proxy (ipaddr TEXT,port TEXT,ishttp TEXT,istranspar TEXT)')
         #这里设置sqlite主键自增，id INTEGER PRIMARY KEY，则插入一个null值得时候，会实现自动新增主键
-        #同时只存储ip地址，端口，类型，匿名情况和地区情况
+        #同时只存储ip地址，端口，类型，匿名情况
 
-    def storeToSQL(self):
+    def storeToSQL(self,**kwargs):
+        kw = kwargs 
         try:
             proxyvalues = []
-            for k,v in self._kw.items():
+            for k,v in kw.items():
                 proxyvalues.append(v)
-            self._c.executemany('INSERT INTO proxy VALUES (?,?,?,?,?)',proxyvalues)
+            self._c.executemany('INSERT INTO proxy VALUES (?,?,?,?)',proxyvalues)
             #以上是插入对象到数据库
             self._c.execute('DELETE FROM proxy WHERE rowid NOT IN (SELECT MIN(rowid) FROM proxy GROUP BY ipaddr)')
             #每次插入之后，做去除重复项操作，rowid为自带属性，并按照ipaddr删除
@@ -126,4 +148,11 @@ class checkAlive(object):
 
 if __name__ == '__main__':
     p = getProxy()
-    print(p.getxici)
+    plist = p.getxici
+    plist1 = p.getkdaili
+    print(len(plist))
+    print(len(plist1))
+    plist.update(plist1)
+    s = storage()
+    l = s.storeToSQL(**plist)
+    print(l)
